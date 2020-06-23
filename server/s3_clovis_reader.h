@@ -45,7 +45,7 @@ class S3ClovisReaderContext : public S3AsyncOpContextBase {
   // Read/Write Operation context.
   struct s3_clovis_rw_op_context* clovis_rw_op_context;
   bool has_clovis_rw_op_context;
-  std::unique_ptr<S3Evbuffer> p_s3_evbuffer;
+  std::shared_ptr<S3Evbuffer> p_s3_evbuffer;
 
   int layout_id;
   std::string request_id;
@@ -88,7 +88,7 @@ class S3ClovisReaderContext : public S3AsyncOpContextBase {
   // param(in): sz_per_block - clovis unit size of each block to read
   // param(in/out): last_index - where next read should start
   bool init_read_op_ctx(std::string request_id, size_t clovis_block_count,
-                        size_t sz_per_block, uint64_t* last_index) {
+                        size_t sz_per_block, uint64_t* last_index, std::shared_ptr<S3Evbuffer> p_s3_evbuff) {
     // Since we use const size buffer pool in libevent, we use its size of buf
     size_t total_read_sz = clovis_block_count * sz_per_block;
     size_t evbuf_unit_buf_sz =
@@ -102,8 +102,12 @@ class S3ClovisReaderContext : public S3AsyncOpContextBase {
       return false;
     }
     // Create real buffer space using evbuffer
-    p_s3_evbuffer = std::unique_ptr<S3Evbuffer>(
-        new S3Evbuffer(request_id, total_read_sz, evbuf_unit_buf_sz));
+    if (p_s3_evbuff != NULL) {
+      p_s3_evbuffer = p_s3_evbuff;
+    } else {
+      p_s3_evbuffer = std::shared_ptr<S3Evbuffer>(
+          new S3Evbuffer(request_id, total_read_sz, evbuf_unit_buf_sz));
+    }
     int rc = p_s3_evbuffer->init();
     if (rc != 0) {
       return false;
@@ -187,7 +191,7 @@ class S3ClovisReader {
 
   // This reads "num_of_blocks_to_read" blocks, and is called after object is
   // opened.
-  virtual bool read_object();
+  virtual bool read_object(std::shared_ptr<S3Evbuffer> p_s3_evbuff = nullptr);
   void read_object_successful();
   void read_object_failed();
 
@@ -209,7 +213,8 @@ class S3ClovisReader {
   // Returns: true = launched, false = failed to launch (out-of-memory)
   virtual bool read_object_data(size_t num_of_blocks,
                                 std::function<void(void)> on_success,
-                                std::function<void(void)> on_failed);
+                                std::function<void(void)> on_failed,
+                                std::shared_ptr<S3Evbuffer> p_s3_evbuffer = nullptr);
 
   virtual bool check_object_exist(std::function<void(void)> on_success,
                                   std::function<void(void)> on_failed);

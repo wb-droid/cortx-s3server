@@ -79,7 +79,8 @@ void S3ClovisReader::clean_up_contexts() {
 
 bool S3ClovisReader::read_object_data(size_t num_of_blocks,
                                       std::function<void(void)> on_success,
-                                      std::function<void(void)> on_failed) {
+                                      std::function<void(void)> on_failed,
+                                      std::shared_ptr<S3Evbuffer> p_s3_evbuffer) {
   s3_log(S3_LOG_INFO, request_id,
          "Entering with num_of_blocks = %zu from last_index = %zu\n",
          num_of_blocks, last_index);
@@ -95,7 +96,7 @@ bool S3ClovisReader::read_object_data(size_t num_of_blocks,
   num_of_blocks_to_read = num_of_blocks;
 
   if (is_object_opened) {
-    rc = read_object();
+    rc = read_object(p_s3_evbuffer);
   } else {
     int retcode =
         open_object(std::bind(&S3ClovisReader::open_object_successful, this),
@@ -230,7 +231,7 @@ void S3ClovisReader::open_object_failed() {
   s3_log(S3_LOG_DEBUG, "", "Exiting\n");
 }
 
-bool S3ClovisReader::read_object() {
+bool S3ClovisReader::read_object(std::shared_ptr<S3Evbuffer> p_s3_evbuff) {
   int rc;
   s3_log(S3_LOG_INFO, request_id,
          "Entering with num_of_blocks_to_read = %zu from last_index = %zu\n",
@@ -243,8 +244,10 @@ bool S3ClovisReader::read_object() {
       std::bind(&S3ClovisReader::read_object_failed, this), layout_id));
 
   /* Read the requisite number of blocks from the entity */
-  if (!reader_context->init_read_op_ctx(request_id, num_of_blocks_to_read,
-                                        clovis_unit_size, &last_index)) {
+  bool ret = reader_context->init_read_op_ctx(request_id, num_of_blocks_to_read,
+                                              clovis_unit_size, &last_index, p_s3_evbuff);
+ 
+  if (!ret) {
     // out-of-memory
     state = S3ClovisReaderOpState::ooo;
     s3_log(S3_LOG_ERROR, request_id,

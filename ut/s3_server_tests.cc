@@ -61,7 +61,7 @@ std::set<struct s3_clovis_obj_context *> global_clovis_obj;
 struct m0 instance;
 
 static void _init_log() {
-  s3log_level = S3_LOG_FATAL;
+  s3log_level = S3_LOG_DEBUG;
   FLAGS_log_dir = "./";
 
   switch (s3log_level) {

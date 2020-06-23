@@ -53,7 +53,7 @@ class S3Evbuffer {
   // Create evbuffer of size buf_sz
   S3Evbuffer(std::string request_id, size_t buf_sz, int buf_unit_sz = 16384);
 
-  int init();
+  virtual int init();
   // Returns the pointer to contiguous space for data.
   size_t const get_nvecs() { return nvecs; }
   int const get_no_of_extends();
@@ -61,15 +61,15 @@ class S3Evbuffer {
   // No references will be help within object to any rw_ctx members.
   // Caller will be responsible not to free any pointers returned as these are
   // owned by evbuffer
-  void to_clovis_read_buffers(struct s3_clovis_rw_op_context *rw_ctx,
+  virtual void to_clovis_read_buffers(struct s3_clovis_rw_op_context *rw_ctx,
                               uint64_t *offset);
 
-  size_t get_evbuff_length();
-  void read_drain_data_from_buffer(size_t read_data_start_offset);
-  int drain_data(size_t start_offset);
+  virtual size_t get_evbuff_length();
+  virtual void read_drain_data_from_buffer(size_t read_data_start_offset);
+  virtual int drain_data(size_t start_offset);
   // Releases ownership of evbuffer, caller needs to ensure evbuffer is freed
   // later point of time by owning a reference returned.
-  struct evbuffer *release_ownership();
+  virtual struct evbuffer *release_ownership();
 
   ~S3Evbuffer() {
     if (p_evbuf != nullptr) {

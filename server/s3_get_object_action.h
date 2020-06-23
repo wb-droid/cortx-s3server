@@ -70,7 +70,7 @@ class S3GetObjectAction : public S3ObjectAction {
   void set_total_blocks_to_read_from_object();
   bool validate_range_header_and_set_read_options(
       const std::string& range_value);
-  void read_object();
+  void read_object(std::shared_ptr<S3Evbuffer> p_s3_evbuffer = nullptr);
 
   void read_object_data();
   void read_object_data_failed();

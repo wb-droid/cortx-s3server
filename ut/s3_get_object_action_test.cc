@@ -20,6 +20,7 @@
 #include <memory>
 
 #include "mock_s3_factory.h"
+#include "mock_s3_evbuffer_wrapper.h"
 #include "s3_clovis_layout.h"
 #include "s3_error_codes.h"
 #include "s3_get_object_action.h"
@@ -90,6 +91,8 @@ class S3GetObjectActionTest : public testing::Test {
         .WillRepeatedly(ReturnRef(bucket_name));
     EXPECT_CALL(*ptr_mock_request, get_object_name())
         .WillRepeatedly(ReturnRef(object_name));
+    ptr_mock_s3_evbuffer = std::shared_ptr<MockS3Evbuffer>("123123", 32768, 16384);
+
 
     // Owned and deleted by shared_ptr in S3GetObjectAction
     bucket_meta_factory =
@@ -118,6 +121,7 @@ class S3GetObjectActionTest : public testing::Test {
   std::shared_ptr<MockS3ObjectMetadataFactory> object_meta_factory;
   std::shared_ptr<MockS3ClovisReaderFactory> clovis_reader_factory;
   std::shared_ptr<MockS3AsyncBufferOptContainerFactory> async_buffer_factory;
+  std::shared_ptr<MockS3Evbuffer> ptr_mock_s3_evbuffer;
 
   std::shared_ptr<S3GetObjectAction> action_under_test;
 
@@ -882,8 +886,9 @@ TEST_F(S3GetObjectActionTest, ReadObjectOfSizeLessThanUnitSize) {
   EXPECT_CALL(*(clovis_reader_factory->mock_clovis_reader), get_state())
       .Times(AtLeast(1))
       .WillOnce(Return(S3ClovisReaderOpState::success));
+  EXPECT_CALL(*ptr_mock_s3_evbuffer, get_evbuff_length()).Times(AtLeast(1));
   action_under_test->validate_object_info();
-  action_under_test->read_object();
+  action_under_test->read_object(ptr_mock_s3_evbuffer);
 }
 
 TEST_F(S3GetObjectActionTest, ReadObjectOfSizeEqualToUnitSize) {
